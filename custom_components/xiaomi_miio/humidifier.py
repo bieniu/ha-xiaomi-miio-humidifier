@@ -582,12 +582,7 @@ class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
     @property
     def mode(self):
         """Return the current mode."""
-        if self._state:
-            return self.MODE_MAPPING.get(
-                AirhumidifierMiotOperationMode(self._state_attrs[ATTR_MODE])
-            )
-
-        return None
+        return self._mode
 
     @property
     def button_pressed(self):
