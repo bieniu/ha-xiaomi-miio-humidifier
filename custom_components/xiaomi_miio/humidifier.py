@@ -480,7 +480,7 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
         try:
             state = await self.hass.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
-            _LOGGER.error("!!!!! state: %s", state)
+            
             self._available = True
             self._state = state.is_on
             self._mode = state.mode.name
