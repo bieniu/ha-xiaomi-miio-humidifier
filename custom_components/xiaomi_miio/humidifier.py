@@ -463,6 +463,8 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER_CA4
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER_CA4
             self._available_modes = [MODE_LOW, MODE_MEDIUM, MODE_HIGH]
+            for mode in AirhumidifierOperationMode:
+                _LOGGER.debug("!!!! CA4 mode: %s, name %s", mode, mode.name)
         else:
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER
