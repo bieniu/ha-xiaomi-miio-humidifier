@@ -63,23 +63,14 @@ DEFAULT_MIN_HUMIDITY = 30
 DEFAULT_MAX_HUMIDITY = 80
 DATA_KEY = "humidifier.xiaomi_miio"
 
-MODE_HIGH = "High"
-MODE_LOW = "Low"
-MODE_MEDIUM = "Medium"
-MODE_AUTO = "Auto"
-
-MIOT_MODE_MAPPING = {
-        AirhumidifierMiotOperationMode.Low: MODE_LOW,
-        AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
-        AirhumidifierMiotOperationMode.High: MODE_HIGH,
-        AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
-    }
-
-MIOT_REVERSE_MODE_MAPPING = {v: k for k, v in MIOT_MODE_MAPPING.items()}
-
 CONF_MODEL = "model"
 
 ATTR_MODEL = "model"
+
+MODE_HIGH = "High"
+MODE_SILENT = "Silent"
+MODE_MEDIUM = "Medium"
+MODE_AUTO = "Auto"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -499,12 +490,7 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
 
             self._available = True
             self._state = state.is_on
-            if self._model == MODEL_AIRHUMIDIFIER_CA4:
-                self._mode = MIOT_MODE_MAPPING[state.mode]
-            else:
-                self._mode = state.mode.name
-            _LOGGER.error(state.mode)
-            _LOGGER.error(state.mode.name)
+            self._mode = state.mode
             self._target_humidity = state.target_humidity
             self._state_attrs.update(
                 {
@@ -526,7 +512,7 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
     @property
     def mode(self):
         """Return the current mode."""
-        return self._mode
+        return self._mode.name
 
     async def async_set_mode(self, mode: str) -> None:
         """Set the speed of the fan."""
@@ -589,15 +575,19 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
 
 class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
     """Representation of a Xiaomi Air Humidifier (MiOT protocol)."""
+    MODE_MAPPING = {
+        AirhumidifierMiotOperationMode.Low: MODE_SILENT,
+        AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
+        AirhumidifierMiotOperationMode.High: MODE_HIGH,
+        AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
+    }
 
-    # MODE_MAPPING = {
-    #     AirhumidifierMiotOperationMode.Low: MODE_LOW,
-    #     AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
-    #     AirhumidifierMiotOperationMode.High: MODE_HIGH,
-    #     AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
-    # }
+    REVERSE_MODE_MAPPING = {v: k for k, v in MODE_MAPPING.items()}
 
-    # REVERSE_MODE_MAPPING = {v: k for k, v in MODE_MAPPING.items()}
+    @property
+    def mode(self):
+        """Return the current mode."""
+        return self.MODE_MAPPING[self._mode]
 
     @property
     def button_pressed(self):
@@ -611,10 +601,12 @@ class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
 
     async def async_set_mode(self, mode: str) -> None:
         """Set the mode of the fan."""
+        _LOGGER.debug("Setting the operation mode to: %s", mode)
+
         await self._try_command(
             "Setting operation mode of the miio device failed.",
             self._device.set_mode,
-            MIOT_REVERSE_MODE_MAPPING[mode],
+            self.REVERSE_MODE_MAPPING[mode],
         )
 
     async def async_set_led_brightness(self, brightness: int = 2):
