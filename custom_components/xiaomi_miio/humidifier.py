@@ -105,10 +105,6 @@ ATTR_ACTUAL_MOTOR_SPEED = "actual_speed"
 ATTR_FAHRENHEIT = "fahrenheit"
 ATTR_FAULT = "fault"
 
-MODE_HIGH = "high"
-MODE_LOW = "low"
-MODE_MEDIUM = "medium"
-
 AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER_COMMON = {
     ATTR_TEMPERATURE: "temperature",
     ATTR_CURRENT_HUMIDITY: "humidity",
@@ -142,9 +138,6 @@ AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER_CA4 = {
     ATTR_MOTOR_SPEED: "motor_speed",
 }
 
-
-OPERATION_MODES_HUMIDIFIER = ["Auto", "Silent", "Medium", "High"]
-
 SUCCESS = ["ok"]
 
 FEATURE_SET_MODE = 1
@@ -158,7 +151,8 @@ FEATURE_SET_FAN_LEVEL = 128
 FEATURE_SET_MOTOR_SPEED = 256
 
 FEATURE_FLAGS_AIRHUMIDIFIER = (
-    FEATURE_SET_BUZZER
+    FEATURE_SET_MODE
+    | FEATURE_SET_BUZZER
     | FEATURE_SET_CHILD_LOCK
     | FEATURE_SET_LED
     | FEATURE_SET_LED_BRIGHTNESS
@@ -462,9 +456,11 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
         elif self._model in [MODEL_AIRHUMIDIFIER_CA4]:
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER_CA4
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER_CA4
-            self._available_modes = [MODE_LOW, MODE_MEDIUM, MODE_HIGH]
-            for mode in AirhumidifierOperationMode:
-                _LOGGER.debug("!!!! CA4 mode: %s, name %s", mode, mode.name)
+            self._available_modes = [
+                mode.name
+                for mode in AirhumidifierOperationMode
+                if mode is not AirhumidifierOperationMode.Strong
+            ]
         else:
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER
@@ -484,7 +480,7 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
         try:
             state = await self.hass.async_add_executor_job(self._device.status)
             _LOGGER.debug("Got new state: %s", state)
-
+            _LOGGER.error("!!!!! state: %s", state)
             self._available = True
             self._state = state.is_on
             self._mode = state.mode.name
@@ -572,19 +568,6 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
 
 class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
     """Representation of a Xiaomi Air Humidifier (MiOT protocol)."""
-
-    MODE_MAPPING = {
-        AirhumidifierMiotOperationMode.Low: MODE_LOW,
-        AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
-        AirhumidifierMiotOperationMode.High: MODE_HIGH,
-    }
-
-    REVERSE_MODE_MAPPING = {v: k for k, v in MODE_MAPPING.items()}
-
-    @property
-    def mode(self):
-        """Return the current mode."""
-        return self._mode
 
     @property
     def button_pressed(self):
