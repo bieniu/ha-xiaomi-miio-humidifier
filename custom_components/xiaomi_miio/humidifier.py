@@ -579,14 +579,6 @@ class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
 
         return None
 
-    async def async_set_mode(self, mode: str) -> None:
-        """Set the mode of the fan."""
-        await self._try_command(
-            "Setting operation mode of the miio device failed.",
-            self._device.set_mode,
-            self.REVERSE_MODE_MAPPING[mode],
-        )
-
     async def async_set_led_brightness(self, brightness: int = 2):
         """Set the led brightness."""
         if self._device_features & FEATURE_SET_LED_BRIGHTNESS == 0:
