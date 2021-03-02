@@ -25,13 +25,7 @@ from homeassistant.components.humidifier.const import (
     DEVICE_CLASS_HUMIDIFIER,
     SUPPORT_MODES,
 )
-from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    ATTR_MODE,
-    CONF_HOST,
-    CONF_NAME,
-    CONF_TOKEN,
-)
+from homeassistant.const import ATTR_ENTITY_ID, CONF_HOST, CONF_NAME, CONF_TOKEN
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -67,10 +61,10 @@ CONF_MODEL = "model"
 
 ATTR_MODEL = "model"
 
-MODE_HIGH = "High"
-MODE_SILENT = "Silent"
-MODE_MEDIUM = "Medium"
 MODE_AUTO = "Auto"
+MODE_HIGH = "High"
+MODE_LOW = "Low"
+MODE_MEDIUM = "Medium"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -169,7 +163,8 @@ FEATURE_FLAGS_AIRHUMIDIFIER = (
 FEATURE_FLAGS_AIRHUMIDIFIER_CA_AND_CB = FEATURE_FLAGS_AIRHUMIDIFIER | FEATURE_SET_DRY
 
 FEATURE_FLAGS_AIRHUMIDIFIER_CA4 = (
-    FEATURE_SET_BUZZER
+    FEATURE_SET_MODE
+    | FEATURE_SET_BUZZER
     | FEATURE_SET_CHILD_LOCK
     | FEATURE_SET_LED_BRIGHTNESS
     | FEATURE_SET_TARGET_HUMIDITY
@@ -463,11 +458,7 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
         elif self._model in [MODEL_AIRHUMIDIFIER_CA4]:
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER_CA4
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER_CA4
-            self._available_modes = [
-                mode.name
-                for mode in AirhumidifierOperationMode
-                if mode is not AirhumidifierOperationMode.Strong
-            ]
+            self._available_modes = [MODE_AUTO, MODE_LOW, MODE_MEDIUM, MODE_HIGH]
         else:
             self._device_features = FEATURE_FLAGS_AIRHUMIDIFIER
             self._available_attributes = AVAILABLE_ATTRIBUTES_AIRHUMIDIFIER
@@ -575,11 +566,13 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
 
 class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
     """Representation of a Xiaomi Air Humidifier (MiOT protocol)."""
+
+
     MODE_MAPPING = {
-        AirhumidifierMiotOperationMode.Low: MODE_SILENT,
+        AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
+        AirhumidifierMiotOperationMode.Low: MODE_LOW,
         AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
         AirhumidifierMiotOperationMode.High: MODE_HIGH,
-        AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
     }
 
     REVERSE_MODE_MAPPING = {v: k for k, v in MODE_MAPPING.items()}
@@ -601,6 +594,9 @@ class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
 
     async def async_set_mode(self, mode: str) -> None:
         """Set the mode of the fan."""
+        if self._device_features & FEATURE_SET_MODE == 0:
+            return
+
         _LOGGER.debug("Setting the operation mode to: %s", mode)
 
         await self._try_command(
