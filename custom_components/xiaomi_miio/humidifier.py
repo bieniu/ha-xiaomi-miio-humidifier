@@ -46,6 +46,7 @@ from .const import (
     SERVICE_HUMIDIFIER_SET_LED_BRIGHTNESS,
     SERVICE_HUMIDIFIER_SET_LED_OFF,
     SERVICE_HUMIDIFIER_SET_LED_ON,
+    SERVICE_HUMIDIFIER_SET_MOTOR_SPEED,
     SERVICE_HUMIDIFIER_SET_TARGET_HUMIDITY,
 )
 from .device import XiaomiMiioEntity
@@ -190,6 +191,14 @@ SERVICE_SCHEMA_TARGET_HUMIDITY = HUMIDIFIER_SERVICE_SCHEMA.extend(
     }
 )
 
+SERVICE_SCHEMA_MOTOR_SPEED = HUMIDIFIER_SERVICE_SCHEMA.extend(
+    {
+        vol.Required(ATTR_MOTOR_SPEED): vol.All(
+            vol.Coerce(int), vol.Clamp(min=200, max=2000)
+        )
+    }
+)
+
 SERVICE_TO_METHOD = {
     SERVICE_HUMIDIFIER_SET_BUZZER_ON: {"method": "async_set_buzzer_on"},
     SERVICE_HUMIDIFIER_SET_BUZZER_OFF: {"method": "async_set_buzzer_off"},
@@ -207,6 +216,10 @@ SERVICE_TO_METHOD = {
     },
     SERVICE_HUMIDIFIER_SET_DRY_ON: {"method": "async_set_dry_on"},
     SERVICE_HUMIDIFIER_SET_DRY_OFF: {"method": "async_set_dry_off"},
+    SERVICE_HUMIDIFIER_SET_MOTOR_SPEED: {
+        "method": "async_set_motor_speed",
+        "schema": SERVICE_SCHEMA_MOTOR_SPEED,
+    },
 }
 
 
@@ -518,6 +531,26 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
             AirhumidifierOperationMode[mode.title()],
         )
 
+    async def async_set_led_on(self):
+        """Turn the led on."""
+        if self._device_features & FEATURE_SET_LED == 0:
+            return
+
+        await self._try_command(
+            "Turning the led of the miio device off failed.", self._device.set_led, True
+        )
+
+    async def async_set_led_off(self):
+        """Turn the led off."""
+        if self._device_features & FEATURE_SET_LED == 0:
+            return
+
+        await self._try_command(
+            "Turning the led of the miio device off failed.",
+            self._device.set_led,
+            False,
+        )
+
     async def async_set_led_brightness(self, brightness: int = 2):
         """Set the led brightness."""
         if self._device_features & FEATURE_SET_LED_BRIGHTNESS == 0:
@@ -567,12 +600,11 @@ class XiaomiAirHumidifier(XiaomiGenericDevice):
 class XiaomiAirHumidifierMiot(XiaomiAirHumidifier):
     """Representation of a Xiaomi Air Humidifier (MiOT protocol)."""
 
-
     MODE_MAPPING = {
         AirhumidifierMiotOperationMode.Auto: MODE_AUTO,
+        AirhumidifierMiotOperationMode.High: MODE_HIGH,
         AirhumidifierMiotOperationMode.Low: MODE_LOW,
         AirhumidifierMiotOperationMode.Mid: MODE_MEDIUM,
-        AirhumidifierMiotOperationMode.High: MODE_HIGH,
     }
 
     REVERSE_MODE_MAPPING = {v: k for k, v in MODE_MAPPING.items()}
